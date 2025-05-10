@@ -1,8 +1,22 @@
-from flask import Flask, render_template, jsonify
-import pandas as pd
+from flask import Flask, jsonify
 import os
 
 app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Hello from Vercel!"
+
+@app.route('/api/scenario/<num>')
+def get_scenario(num):
+    return jsonify({"scenario": num})
+
+# Απαραίτητο για Vercel
+if __name__ == '__main__':
+    app.run()
+else:
+    # Για Serverless runtime
+    api = app
 
 EXCEL_FILE = os.path.join(os.path.dirname(__file__), "KATANOMH_KATANAL.xlsx")
 
