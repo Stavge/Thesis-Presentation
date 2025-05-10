@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Σενάρια Ενεργειακής Αναβάθμισης</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .slider-container {
+            grid-column: span 2;
+            text-align: center;
+        }
+        .slider {
+            width: 80%;
+            margin: 15px 0;
+        }
+        .scenario-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .highlight {
+            background-color: #FFF3CD;
+        }
+        .chart-container {
+            margin-top: 20px;
+        }
+        .binary-code {
+            font-family: monospace;
+            font-size: 1.2em;
+            color: #d35400;
+        }
+        .axis-label {
+            writing-mode: horizontal-tb !important;
+            text-orientation: mixed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Σενάρια Ενεργειακής Αναβάθμισης</h1>
+    
+    <div class="slider-container">
+        <input type="range" min="1" max="{{ total_scenarios }}" value="1" class="slider" id="scenarioSlider">
+        <div class="scenario-display" id="scenarioDisplay">Σενάριο 1 (<span class="binary-code">00000</span>)</div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Πίνακας Παραμέτρων -->
+        <div>
+            <h2>Παράμετροι Σεναρίου</h2>
+            <table id="paramsTable">
+                <tr>
+                    <th>Παράμετρος</th>
+                    <th>Τιμή</th>
+                </tr>
+                <!-- JavaScript θα γεμίζει αυτό -->
+            </table>
+        </div>
+
+        <!-- Γράφημα -->
+        <div>
+            <div class="chart-container">
+                <canvas id="energyCostChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Σταθερά όρια άξονων (hardcoded όπως ζητήθηκε)
+        const ENERGY_MIN = 700000;
+        const ENERGY_MAX = 1000000;
+        const COST_MIN = 100000;
+        const COST_MAX = 540000;
+
+        // Αρχικοποίηση Chart
+        const ctx = document.getElementById('energyCostChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Συνολική Κατανάλωση', 'Κόστος Επένδυσης'],
+                datasets: [
+                    {
+                        label: 'kWh',
+                        data: [0, 0],
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '€ (x1000)',
+                        data: [0, 0],
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        min: ENERGY_MIN,
+                        max: ENERGY_MAX,
+                        title: { 
+                            display: true, 
+                            text: 'kWh',
+                            font: { weight: 'bold' }
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('el-GR');
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        min: COST_MIN,
+                        max: COST_MAX,
+                        title: { 
+                            display: true, 
+                            text: '€ (x1000)',
+                            font: { weight: 'bold' }
+                        },
+                        grid: { drawOnChartArea: false },
+                        ticks: {
+                            callback: function(value) {
+                                return (value / 1000).toLocaleString('el-GR') + 'K';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label.includes('€')) {
+                                    return `${label}: ${(context.raw / 1000).toFixed(1)}K €`;
+                                }
+                                return `${label}: ${context.raw.toLocaleString('el-GR')}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Λειτουργία Slider
+        document.getElementById('scenarioSlider').addEventListener('input', function() {
+            const num = this.value;
+            
+            fetch(`/api/scenario/${num}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Ενημέρωση τίτλου με δυαδικό κώδικα
+                    document.getElementById('scenarioDisplay').innerHTML = 
+                        `Σενάριο ${num} (<span class="binary-code">${data.binary}</span>)`;
+                    
+                    // Ενημέρωση πίνακα
+                    updateParamsTable(data.params);
+                    
+                    // Ενημέρωση γραφήματος (διαιρούμε το κόστος δια 1000 για να φαίνεται σε χιλιάδες)
+                    chart.data.datasets[0].data = [data.energy, 0];
+                    chart.data.datasets[1].data = [0, data.cost];
+                    chart.update();
+                });
+        });
+
+        // Ενημέρωση πίνακα παραμέτρων
+        function updateParamsTable(params) {
+            const table = document.getElementById('paramsTable');
+            // Καθαρισμός παλιών δεδομένων
+            while (table.rows.length > 1) {
+                table.deleteRow(1);
+            }
+            // Προσθήκη νέων
+            for (const [param, value] of Object.entries(params)) {
+                if (param !== "Δυαδικός Κώδικας") {
+                    const row = table.insertRow();
+                    const cell1 = row.insertCell(0);
+                    const cell2 = row.insertCell(1);
+                    cell1.textContent = param;
+                    cell2.textContent = value;
+                    cell2.classList.add('highlight');
+                }
+            }
+        }
+
+        // Αρχική φόρτωση
+        document.getElementById('scenarioSlider').dispatchEvent(new Event('input'));
+    </script>
+</body>
+</html>
