@@ -1,58 +1,25 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template
+import pandas as pd
 import os
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Hello from Vercel!"
-
-@app.route('/api/scenario/<num>')
-def get_scenario(num):
-    return jsonify({"scenario": num})
-
-# Απαραίτητο για Vercel
-if __name__ == '__main__':
-    app.run()
-else:
-    # Για Serverless runtime
-    api = app
-
 EXCEL_FILE = os.path.join(os.path.dirname(__file__), "KATANOMH_KATANAL.xlsx")
 
 # Δυαδικοί κωδικοί για κάθε σενάριο (1-32)
-BINARY_CODES = {
-    '1': '00000', '2': '00001', '3': '00010', '4': '00011',
-    '5': '00100', '6': '00101', '7': '00110', '8': '00111',
-    '9': '01000', '10': '01001', '11': '01010', '12': '01011',
-    '13': '01100', '14': '01101', '15': '01110', '16': '01111',
-    '17': '10000', '18': '10001', '19': '10010', '20': '10011',
-    '21': '10100', '22': '10101', '23': '10110', '24': '10111',
-    '25': '11000', '26': '11001', '27': '11010', '28': '11011',
-    '29': '11100', '30': '11101', '31': '11110', '32': '11111'
-}
+BINARY_CODES = { ... }  # (όπως το έχεις)
 
 def get_parameters_from_binary(binary_code):
-    """Μετατροπή δυαδικού κώδικα σε παραμέτρους"""
-    return {
-        "Υαλοπίνακας": "Τριπλός (Low-E)" if binary_code[0] == '1' else "Διπλός",
-        "Μόνωση": "0.129 m" if binary_code[1] == '1' else "0.079 m",
-        "Φωτοβολταϊκά": "384 m²" if binary_code[2] == '1' else "192 m²",
-        "ΖΝΧ": "384 m²" if binary_code[3] == '1' else "192 m²",
-        "Αντλία θερμότητας": "Με" if binary_code[4] == '1' else "Χωρίς",
-        "Δυαδικός Κώδικας": binary_code
-    }
+    return { ... }  # (όπως το έχεις)
 
 def load_scenarios():
-    """Φόρτωση δεδομένων από Excel"""
     try:
+        print("Excel file exists:", os.path.exists(EXCEL_FILE))
         df = pd.read_excel(EXCEL_FILE, header=None)
-        
         scenarios = {}
-        for col in range(1, 33):  # Στήλες B-AG
+        for col in range(1, 33):
             scenario_num = str(col)
             binary_code = BINARY_CODES[scenario_num]
-            
             scenarios[scenario_num] = {
                 "energy": float(df.iloc[1, col]),
                 "cost": float(df.iloc[2, col]),
@@ -61,12 +28,11 @@ def load_scenarios():
             }
         return scenarios
     except Exception as e:
-        print(f"Σφάλμα: {e}")
+        print(f"Σφάλμα Excel: {e}")
         return {}
 
 SCENARIOS = load_scenarios()
 
-# Προσδιορισμός σταθερών ορίων
 ENERGY_MIN = min(s["energy"] for s in SCENARIOS.values())
 ENERGY_MAX = max(s["energy"] for s in SCENARIOS.values())
 COST_MIN = min(s["cost"] for s in SCENARIOS.values())
@@ -87,3 +53,5 @@ def get_scenario(num):
 
 if __name__ == '__main__':
     app.run(debug=True)
+else:
+    api = app
