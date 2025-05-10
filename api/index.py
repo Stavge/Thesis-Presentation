@@ -4,4 +4,4 @@ app = Flask(__name__)
 
 @app.route('/api/scenario/<num>')
 def get_scenario(num):
-    return jsonify({"test": "data"})  # Προσωρινό
+    return jsonify({"test": "data"})
