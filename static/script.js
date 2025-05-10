@@ -4,7 +4,7 @@ document.getElementById("scenarioSlider").addEventListener("input", function() {
     const scenarioCode = scenarioNum.toString(2).padStart(5, '0'); // Δυαδικός κωδικός
     
     // 2. Fetch δεδομένων από Flask API
-    fetch(`/api/scenario/${scenarioCode}`)
+   fetch(`/api/scenario/${scenarioCode}`)
         .then(response => response.json())
         .then(data => {
             // 3. Ενημέρωση πίνακα
